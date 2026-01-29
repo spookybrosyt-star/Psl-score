@@ -2,404 +2,434 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Strict PSL Analyzer</title>
+    <title> PSL Analyzer</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
     <style>
-        body { background: #000; color: #fff; font-family: 'Courier New', monospace; text-align: center; margin: 0; padding: 20px; }
-        .container { max-width: 1000px; margin: 0 auto; }
-        .btn { padding: 15px 30px; font-size: 18px; cursor: pointer; background: #222; color: #fff; border: 1px solid #555; margin: 5px; font-weight: bold; }
-        .btn.active { background: #00ff00; color: #000; border-color: #00ff00; }
-        .btn:disabled { opacity: 0.3; cursor: not-allowed; background: #333; color: #888; border: 1px solid #444; }
+        :root { --primary: #00ff41; --danger: #ff0033; --bg: #0a0a0a; --glass: rgba(20, 20, 20, 0.9); }
+        body { background: var(--bg); color: #eee; font-family: 'Consolas', 'Courier New', monospace; margin: 0; overflow: hidden; height: 100vh; display: flex; flex-direction: column; align-items: center; }
         
-        .vid-wrapper { position: relative; width: 640px; margin: 20px auto; border: 2px solid #333; }
-        video { width: 100%; display: block; transform: scaleX(-1); }
-        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform: scaleX(-1); }
+        /* UI LAYOUT */
+        .hud-container { position: relative; width: 100%; max-width: 800px; margin-top: 20px; }
+        .video-box { position: relative; width: 100%; border: 1px solid #333; box-shadow: 0 0 20px rgba(0,0,0,0.8); background: #000; }
+        video { width: 100%; display: block; transform: scaleX(-1); opacity: 0.6; }
+        canvas.output { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform: scaleX(-1); }
         
-        .guide-box { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.8); padding: 10px; font-size: 16px; text-align: left; border-left: 3px solid #ff0000; }
-        .guide-box.good { border-left: 3px solid #00ff00; color: #00ff00; }
+        /* SCANNER OVERLAYS */
+        .scan-line {
+            position: absolute; top: 0; left: 0; width: 100%; height: 2px;
+            background: var(--primary);
+            box-shadow: 0 0 10px var(--primary);
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .scanning .scan-line { opacity: 1; animation: scanMove 2s infinite linear; }
+        @keyframes scanMove { 0% { top: 0; } 50% { top: 100%; } 100% { top: 0; } }
+
+        .reticle {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 300px; height: 380px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 100px;
+            pointer-events: none;
+            transition: border-color 0.2s;
+        }
+
+        /* STATUS & CONTROLS */
+        .status-bar {
+            background: #111; border-top: 2px solid #333; padding: 15px; width: 100%;
+            display: flex; justify-content: space-between; align-items: center;
+            box-sizing: border-box;
+        }
+        .status-text { font-size: 18px; font-weight: bold; color: #888; text-transform: uppercase; }
+        .progress-container { width: 50%; background: #222; height: 10px; border-radius: 5px; overflow: hidden; margin: 0 15px; }
+        .progress-bar { width: 0%; height: 100%; background: var(--primary); transition: width 0.1s linear; }
+
+        .btn {
+            background: transparent; border: 1px solid var(--primary); color: var(--primary);
+            padding: 10px 30px; font-family: inherit; font-size: 16px; cursor: pointer;
+            text-transform: uppercase; letter-spacing: 2px; transition: all 0.2s;
+        }
+        .btn:hover { background: var(--primary); color: #000; box-shadow: 0 0 15px var(--primary); }
+        .btn:disabled { border-color: #444; color: #444; cursor: not-allowed; box-shadow: none; background: transparent; }
+
+        /* RESULTS SCREEN */
+        .results-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); z-index: 99; display: none;
+            overflow-y: auto; padding: 40px; box-sizing: border-box;
+        }
+        .tier-display { font-size: 80px; font-weight: 900; margin: 0; line-height: 1; text-shadow: 0 0 30px currentColor; font-family: 'Impact', sans-serif; letter-spacing: 2px; text-align: center; }
+        .score-display { font-size: 24px; color: #888; margin-bottom: 40px; text-align: center; }
         
-        .results { display: none; margin-top: 20px; }
-        .tier-text { font-family: 'Impact'; font-size: 60px; letter-spacing: 2px; margin: 10px 0; text-shadow: 0 0 10px currentColor; }
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; max-width: 1200px; margin: 0 auto; }
+        .metric-card { background: #111; border: 1px solid #333; padding: 20px; }
+        .metric-head { display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 5px; }
+        .metric-val { font-size: 24px; font-weight: bold; }
+        .metric-desc { font-size: 12px; color: #666; margin-top: 5px; }
         
-        .analysis-grid { display: flex; justify-content: center; gap: 20px; margin-top: 20px; }
-        .canvas-card { border: 1px solid #333; background: #111; padding: 5px; }
-        .breakdown { text-align: left; background: #111; padding: 20px; border-left: 3px solid #444; max-width: 700px; margin: 20px auto; font-size: 14px; }
-        
-        .stat-row { display: flex; justify-content: space-between; border-bottom: 1px solid #222; padding: 5px 0; }
-        .stat-good { color: #00ff00; }
-        .stat-bad { color: #ff0000; }
-        .stat-mid { color: #ffff00; }
+        .good { color: var(--primary); }
+        .bad { color: var(--danger); }
+        .mid { color: #ffe600; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>STRICT PSL ANALYZER</h1>
+<div class="hud-container">
+    <div class="video-box" id="vidBox">
+        <video id="inputVideo" playsinline autoplay></video>
+        <canvas id="outputCanvas" class="output"></canvas>
+        <div class="scan-line"></div>
+        <div id="reticle" class="reticle"></div>
+    </div>
     
-    <div id="setupControls">
-        <button id="btnMale" class="btn active" onclick="setGender('male')">MALE</button>
-        <button id="btnFemale" class="btn" onclick="setGender('female')">FEMALE</button>
+    <div class="status-bar">
+        <div id="statusText" class="status-text">INITIALIZING CORE...</div>
+        <div class="progress-container"><div id="progressBar" class="progress-bar"></div></div>
+        <button id="actionBtn" class="btn" disabled onclick="handleAction()">WAIT</button>
     </div>
-
-    <div id="liveSection">
-        <div class="vid-wrapper">
-            <video id="inputVideo" playsinline autoplay></video>
-            <canvas id="overlayCanvas" class="overlay"></canvas>
-            <div id="guideMsg" class="guide-box">INITIALIZING...</div>
-        </div>
-        <button id="capBtn" class="btn" disabled style="width: 640px; margin-top: 10px;">CAPTURE FRONT</button>
+    
+    <div style="margin-top: 10px; font-size: 12px; color: #555; text-align: center;">
+        ENSURE EVEN LIGHTING • REMOVE GLASSES • NEUTRAL EXPRESSION
     </div>
+</div>
 
-    <div id="resultsSection" class="results">
-        <div id="finalTier" class="tier-text">CALCULATING...</div>
-        <div id="finalScore" style="color: #888; font-size: 20px;"></div>
-        
-        <div class="analysis-grid">
-            <div class="canvas-card"><canvas id="resFront"></canvas></div>
-            <div class="canvas-card"><canvas id="resSide"></canvas></div>
-        </div>
-        
-        <div id="detailedStats" class="breakdown"></div>
-        <button class="btn" onclick="location.reload()">RESET</button>
+<div id="resultsModal" class="results-modal">
+    <div id="finalTier" class="tier-display">CALCULATING</div>
+    <div id="finalScore" class="score-display">0.0</div>
+    <div id="metricsGrid" class="metrics-grid"></div>
+    <div style="text-align: center; margin-top: 50px;">
+        <button class="btn" onclick="location.reload()">RESTART SCAN</button>
     </div>
 </div>
 
 <script>
-    let gender = 'male';
-    let step = 1; // 1=Front, 2=Side
-    let frontLandmarks = null;
-    let sideLandmarks = null;
-    let sideDir = null; // 'left' or 'right'
-    let frontImg = null;
-    let sideImg = null;
-    let currentLandmarks = null;
-
+    // --- CONFIGURATION ---
+    const SCAN_DURATION_MS = 8000; // 8 Seconds of pure data
+    const STABILITY_THRESHOLD = 2.5; // Lower is stricter
+    
+    // --- STATE MANAGEMENT ---
+    let state = 'INIT'; // INIT, READY, SCAN_FRONT, SCAN_SIDE, PROCESSING, DONE
+    let landmarksBuffer = [];
+    let gender = 'male'; // Default, can be toggled if UI added, assuming male strictness for now
+    let scanStartTime = 0;
+    
+    // --- DOM ELEMENTS ---
     const video = document.getElementById('inputVideo');
-    const canvas = document.getElementById('overlayCanvas');
+    const canvas = document.getElementById('outputCanvas');
     const ctx = canvas.getContext('2d');
-    const guideMsg = document.getElementById('guideMsg');
-    const capBtn = document.getElementById('capBtn');
-
-    function setGender(g) {
-        gender = g;
-        document.getElementById('btnMale').className = g==='male'?'btn active':'btn';
-        document.getElementById('btnFemale').className = g==='female'?'btn active':'btn';
-    }
+    const statusText = document.getElementById('statusText');
+    const progressBar = document.getElementById('progressBar');
+    const actionBtn = document.getElementById('actionBtn');
+    const vidBox = document.getElementById('vidBox');
+    const reticle = document.getElementById('reticle');
 
     // --- MEDIAPIPE SETUP ---
     const faceMesh = new FaceMesh({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`});
-    faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+    faceMesh.setOptions({
+        maxNumFaces: 1,
+        refineLandmarks: true, // IMPORTANT: Enables Iris tracking and better lips
+        minDetectionConfidence: 0.7,
+        minTrackingConfidence: 0.7
+    });
     faceMesh.onResults(onResults);
 
-    const camera = new Camera(video, { onFrame: async () => { await faceMesh.send({image: video}); }, width: 640, height: 480 });
+    const camera = new Camera(video, {
+        onFrame: async () => { await faceMesh.send({image: video}); },
+        width: 1280, height: 720
+    });
     camera.start();
 
     // --- MAIN LOOP ---
     function onResults(results) {
-        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.save();
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-
+        
+        // DRAW FACEMESH (Subtle tech overlay)
         if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
-            currentLandmarks = results.multiFaceLandmarks[0];
+            const lm = results.multiFaceLandmarks[0];
             
-            if (step === 1) analyzeFront(currentLandmarks);
-            if (step === 2) analyzeSide(currentLandmarks);
+            // Check Pose Stability
+            const alignment = checkAlignment(lm, state);
+            
+            if (state === 'READY') {
+                drawMesh(lm, '#333');
+                if (alignment.ok) {
+                    statusText.innerText = "SUBJECT LOCKED";
+                    statusText.style.color = "#00ff41";
+                    reticle.style.borderColor = "#00ff41";
+                    actionBtn.disabled = false;
+                    actionBtn.innerText = "START SCAN";
+                } else {
+                    statusText.innerText = alignment.msg;
+                    statusText.style.color = "#ff0033";
+                    reticle.style.borderColor = "#ff0033";
+                    actionBtn.disabled = true;
+                    actionBtn.innerText = "ALIGN FACE";
+                }
+            }
+            else if (state === 'SCAN_FRONT' || state === 'SCAN_SIDE') {
+                drawMesh(lm, '#00ff41'); // Active scan color
+                
+                if (alignment.ok) {
+                    // Accumulate Data
+                    landmarksBuffer.push(lm);
+                    
+                    // Update Progress
+                    let elapsed = Date.now() - scanStartTime;
+                    let pct = Math.min(100, (elapsed / SCAN_DURATION_MS) * 100);
+                    progressBar.style.width = pct + "%";
+                    statusText.innerText = `ACQUIRING DATA... ${landmarksBuffer.length} SAMPLES`;
+                    statusText.style.color = "#00ff41";
+
+                    if (elapsed >= SCAN_DURATION_MS) {
+                        nextState();
+                    }
+                } else {
+                    // Pause Scan if user moves
+                    statusText.innerText = "HOLD STEADY - " + alignment.msg;
+                    statusText.style.color = "#ffff00";
+                    scanStartTime += 50; // Penalty/Pause timer
+                }
+            }
         } else {
-            guideMsg.innerText = "NO FACE DETECTED";
-            guideMsg.className = "guide-box";
-            capBtn.disabled = true;
+            statusText.innerText = "NO FACE DETECTED";
+            actionBtn.disabled = true;
         }
+        ctx.restore();
     }
 
-    // --- STEP 1: FRONT ANALYSIS ---
-    function analyzeFront(lm) {
-        // 1. Roll (Head Tilt Left/Right)
-        // Compare eyes Y level (33 vs 263)
+    // --- ALIGNMENT LOGIC ---
+    function checkAlignment(lm, currentState) {
+        // Roll (Tilt Head Left/Right)
         let eyeSlope = Math.abs(lm[33].y - lm[263].y);
-        
-        // 2. Yaw (Head Turn Left/Right)
-        // Nose (1) center vs Cheeks (234, 454)
+        // Pitch (Tilt Head Up/Down) - Using nose bridge length ratio
+        let midFaceY = Math.abs(lm[10].y - lm[1].y); // Forehead to Nose
+        let lowerFaceY = Math.abs(lm[1].y - lm[152].y); // Nose to Chin
+        let pitchRatio = midFaceY / lowerFaceY;
+        // Yaw (Turn Head Left/Right)
         let noseX = lm[1].x;
-        let leftDist = Math.abs(noseX - lm[234].x);
-        let rightDist = Math.abs(noseX - lm[454].x);
-        let yawRatio = leftDist / rightDist;
+        let leftCheekDist = Math.abs(noseX - lm[454].x); // Mirror logic
+        let rightCheekDist = Math.abs(noseX - lm[234].x);
+        let yawRatio = leftCheekDist / (rightCheekDist + 0.001);
 
-        // 3. Pitch (Head Tilt Up/Down) - The "Cheat" Detector
-        // Forehead (10) to Nose (1) distance vs Nose (1) to Chin (152) distance
-        // These ratios define "Facial Thirds" roughly
-        let upperH = Math.abs(lm[10].y - lm[1].y);
-        let lowerH = Math.abs(lm[1].y - lm[152].y);
-        let pitchRatio = upperH / lowerH;
-
-        let error = [];
-        if (eyeSlope > 0.03) error.push("TILT HEAD STRAIGHT");
-        if (yawRatio > 1.2 || yawRatio < 0.8) error.push("LOOK STRAIGHT AHEAD");
-        // Normal pitch ratio is approx 0.65 - 0.85 depending on face
-        if (pitchRatio < 0.55) error.push("DON'T TILT HEAD BACK");
-        if (pitchRatio > 0.95) error.push("DON'T TILT HEAD DOWN");
-
-        if (error.length > 0) {
-            guideMsg.innerText = error[0];
-            guideMsg.className = "guide-box";
-            ctx.strokeStyle = "red";
-            ctx.strokeRect(100, 50, 440, 380);
-            capBtn.disabled = true;
+        if (currentState === 'SCAN_SIDE') {
+            // Check for ~70-90 degree turn
+            // For side profile, one eye becomes obscured or very close to edge.
+            // Using Nose-to-Cheek ratio. If facing Left (our Right), RightCheekDist becomes small.
+            let isSide = (yawRatio > 3.0 || yawRatio < 0.33); 
+            if (!isSide) return { ok: false, msg: "TURN TO PROFILE" };
+            if (eyeSlope > 0.1) return { ok: false, msg: "FIX TILT" };
+            return { ok: true, msg: "OK" };
         } else {
-            guideMsg.innerText = "PERFECT ALIGNMENT";
-            guideMsg.className = "guide-box good";
-            ctx.strokeStyle = "#00FF00";
-            ctx.lineWidth = 3;
-            ctx.strokeRect(100, 50, 440, 380);
-            capBtn.disabled = false;
+            // FRONT
+            if (eyeSlope > 0.03) return { ok: false, msg: "HEAD TILTED" };
+            if (yawRatio > 1.25 || yawRatio < 0.8) return { ok: false, msg: "LOOK STRAIGHT" };
+            if (pitchRatio < 0.55) return { ok: false, msg: "CHIN DOWN" };
+            if (pitchRatio > 0.85) return { ok: false, msg: "CHIN UP" };
+            return { ok: true, msg: "OK" };
         }
     }
 
-    // --- STEP 2: SIDE ANALYSIS ---
-    function analyzeSide(lm) {
-        let noseX = lm[1].x;
-        let leftCheekX = lm[234].x;
-        let rightCheekX = lm[454].x;
-        
-        let distL = Math.abs(noseX - leftCheekX);
-        let distR = Math.abs(noseX - rightCheekX);
+    // --- CONTROLLER ---
+    let frontData = null;
+    let sideData = null;
 
-        let isSide = false;
-        let rotation = 0;
-
-        // Determine Direction
-        if (distL < distR * 0.3) {
-            sideDir = "right_visible";
-            rotation = (1 - (distL / (distL+distR))) * 100;
-        } else if (distR < distL * 0.3) {
-            sideDir = "left_visible";
-            rotation = (1 - (distR / (distL+distR))) * 100;
-        } else {
-            guideMsg.innerText = "TURN HEAD 70° TO SIDE";
-            guideMsg.className = "guide-box";
-            capBtn.disabled = true;
-            return;
-        }
-
-        if (rotation > 75 && rotation < 95) {
-            // PITCH CHECK (Side View) - Prevent looking down to fake jaw
-            // Eye (33/263) should be roughly level with Ear Top (234/454)
-            // This is hard to map perfectly, so we use Nose Bridge Verticality
-            // Line between 10 (top) and 1 (nose tip) shouldn't be too tilted
-            
-            guideMsg.innerText = "HOLD STEADY";
-            guideMsg.className = "guide-box good";
-            ctx.strokeStyle = "#00FF00";
-            ctx.lineWidth = 3;
-            ctx.strokeRect(50, 50, 540, 380);
-            capBtn.disabled = false;
-        } else {
-            guideMsg.innerText = `TURN MORE (${rotation.toFixed(0)}%)`;
-            guideMsg.className = "guide-box";
-            capBtn.disabled = true;
+    function handleAction() {
+        if (state === 'INIT' || state === 'READY') {
+            startScan('SCAN_FRONT');
+        } else if (state === 'INTERMISSION') {
+            startScan('SCAN_SIDE');
         }
     }
 
-    // --- CAPTURE ---
-    capBtn.onclick = () => {
-        let c = document.createElement('canvas'); c.width=640; c.height=480;
-        let cx = c.getContext('2d'); cx.scale(-1,1); cx.drawImage(video, -640,0,640,480);
+    function startScan(newState) {
+        state = newState;
+        landmarksBuffer = [];
+        scanStartTime = Date.now();
+        vidBox.classList.add('scanning');
+        actionBtn.style.display = 'none';
+    }
+
+    function nextState() {
+        vidBox.classList.remove('scanning');
         
-        if (step === 1) {
-            frontLandmarks = currentLandmarks;
-            frontImg = c;
-            step = 2;
-            capBtn.innerText = "CAPTURE SIDE";
-            capBtn.disabled = true;
-        } else {
-            sideLandmarks = currentLandmarks;
-            sideImg = c;
-            calculateFinalScore();
+        // Process Buffer (Deep Averaging)
+        let averagedLM = getAverageLandmarks(landmarksBuffer);
+        
+        if (state === 'SCAN_FRONT') {
+            frontData = averagedLM;
+            state = 'INTERMISSION';
+            progressBar.style.width = "0%";
+            statusText.innerText = "FRONT SCAN COMPLETE";
+            actionBtn.style.display = 'block';
+            actionBtn.innerText = "START SIDE SCAN";
+            actionBtn.disabled = false;
+        } else if (state === 'SCAN_SIDE') {
+            sideData = averagedLM;
+            state = 'PROCESSING';
+            calculateResults();
         }
     }
 
-    // --- SCORING ENGINE ---
-    function calculateFinalScore() {
-        document.getElementById('liveSection').style.display = 'none';
-        document.getElementById('resultsSection').style.display = 'block';
-        document.getElementById('setupControls').style.display = 'none';
-
-        let f = frontLandmarks;
-        let s = sideLandmarks;
-        let score = 50; // Start at Average (50/100)
-        let log = "";
-
-        // --- 1. FRONT METRICS ---
+    function getAverageLandmarks(buffer) {
+        if (buffer.length === 0) return null;
+        let result = [];
+        // Initialize
+        for (let i = 0; i < 478; i++) { result.push({x:0, y:0, z:0}); }
         
-        // A. Canthal Tilt
-        // (Outer Eye Y - Inner Eye Y)
-        let tilt = (f[33].y - f[133].y);
-        let tiltScore = 0;
-        if (tilt < -0.015) tiltScore = 15; // Positive
-        else if (tilt > 0.01) tiltScore = -10; // Negative
-        else tiltScore = 5; // Neutral
-        score += tiltScore;
-        log += stat("Canthal Tilt", tilt < -0.01 ? "Positive (Hunter)" : "Neutral/Negative", tiltScore);
-
-        // B. Cheek-to-Jaw Ratio
-        let cheekW = Math.abs(f[234].x - f[454].x);
-        let jawW = Math.abs(f[58].x - f[288].x);
-        let ratio = jawW / cheekW;
-        let rScore = 0;
-        if (gender === 'male') {
-            if (ratio >= 0.92) rScore = 15; // Square
-            else if (ratio >= 0.85) rScore = 10;
-            else if (ratio < 0.8) rScore = -5;
-        } else {
-            if (ratio < 0.85 && ratio > 0.75) rScore = 15; // V-Taper
-            else rScore = 5;
+        // Sum
+        for (let frame of buffer) {
+            for (let i = 0; i < 478; i++) {
+                result[i].x += frame[i].x;
+                result[i].y += frame[i].y;
+                result[i].z += frame[i].z;
+            }
         }
-        score += rScore;
-        log += stat("Facial Width Ratio", ratio.toFixed(2), rScore);
+        
+        // Divide
+        for (let i = 0; i < 478; i++) {
+            result[i].x /= buffer.length;
+            result[i].y /= buffer.length;
+            result[i].z /= buffer.length;
+        }
+        return result;
+    }
 
-        // C. Midface Ratio (Compactness)
-        // IPD (Interpupillary Dist) vs Midface Height (Eyes to Mouth)
+    // --- ANALYTICS ENGINE ---
+    function calculateResults() {
+        document.getElementById('resultsModal').style.display = 'block';
+        
+        let f = frontData;
+        let s = sideData;
+        let score = 50; // Base
+        let metrics = [];
+
+        // 1. CANTHAL TILT (Eyes)
+        // 33 (Inner) vs 133 (Outer) - Left Eye
+        let innerY = f[133].y; 
+        let outerY = f[33].y; // Note: 33 is outer in MP default? Double check indices. 
+        // MP: 33=LeftInner, 133=LeftOuter (Wait, MP 33 is actually inner corner of Right eye on screen left). 
+        // Let's use Right Eye on face (Screen Left): 362 (Inner), 263 (Outer)
+        let eyeIn = f[362].y;
+        let eyeOut = f[263].y;
+        let tiltDelta = eyeIn - eyeOut; // Positive means Outer is higher (Good)
+        let tiltDeg = Math.atan2(tiltDelta, f[263].x - f[362].x) * (180/Math.PI);
+        
+        // Adjust score
+        let tScore = 0;
+        if (tiltDelta > 0.015) tScore = 15; // Hunter
+        else if (tiltDelta > 0) tScore = 5; // Neutral
+        else tScore = -10; // Negative
+        score += tScore;
+        metrics.push({name: "Canthal Tilt", val: (tiltDelta > 0 ? "+" : "") + "Positive", score: tScore, desc: "Angle of the eyes relative to horizon."});
+
+        // 2. FWHR (Facial Width to Height Ratio)
+        // Bizygomatic Width (234-454) / Midface Height (10-152 * factor)
+        // Simplified: Width (234-454) / Nasion-Prosthion (Approx 6-13?)
+        // Let's use Width (454-234) vs UpperLip-Brow (0-13)
+        let width = Math.abs(f[454].x - f[234].x);
+        let height = Math.abs(f[10].y - f[152].y);
+        let fwhr = width / (height * 0.65); // Adjustment factor for true FWHR approx
+        let fScore = 0;
+        if (fwhr > 1.9) fScore = 15;
+        else if (fwhr > 1.7) fScore = 10;
+        else fScore = -5;
+        score += fScore;
+        metrics.push({name: "FWHR Approx", val: fwhr.toFixed(2), score: fScore, desc: "Facial Width to Height Ratio. >1.8 is dominant."});
+
+        // 3. MIDFACE RATIO (Compactness)
+        // IPD (468-473) vs Philtrum Length
         let ipd = Math.abs(f[468].x - f[473].x);
-        let midFace = Math.abs(f[168].y - f[0].y); // Glabella to Upper Lip
-        let compactRatio = midFace / ipd;
-        let cScore = 0;
-        if (compactRatio < 0.95) cScore = 10; // Compact midface
-        else if (compactRatio > 1.1) cScore = -10; // Long midface
-        score += cScore;
-        log += stat("Midface Compactness", compactRatio.toFixed(2), cScore);
+        let midfaceLen = Math.abs(f[168].y - f[0].y);
+        let ratio = midfaceLen / ipd;
+        let mScore = 0;
+        if (ratio < 0.9) mScore = 15; // Compact
+        else if (ratio > 1.05) mScore = -10; // Long
+        score += mScore;
+        metrics.push({name: "Midface Ratio", val: ratio.toFixed(2), score: mScore, desc: "Midface length vs Eye spacing. Lower is generally better."});
 
-        // --- 2. SIDE METRICS ---
-        let ear = (sideDir==='left_visible') ? s[234] : s[454];
-        let gon = (sideDir==='left_visible') ? s[132] : s[361];
-        let chin = s[152];
+        // 4. JAW DEFINITION (Front)
+        // Bigonial Width (Jaw) vs Bizygomatic Width (Cheek)
+        let jawW = Math.abs(f[58].x - f[288].x);
+        let cheekW = Math.abs(f[454].x - f[234].x);
+        let jRatio = jawW / cheekW;
+        let jScore = 0;
+        if (jRatio > 0.9) jScore = 20; // Robust
+        else if (jRatio < 0.8) jScore = -10; // Narrow
+        else jScore = 5;
+        score += jScore;
+        metrics.push({name: "Jaw/Cheek Ratio", val: (jRatio*100).toFixed(0)+"%", score: jScore, desc: "Jaw width relative to cheekbones."});
+
+        // 5. SIDE PROFILE: GONIAL ANGLE
+        // Ear(234/454), Gonion(172/397 approx), Chin(152)
+        // We use buffered side data 's'
+        // Detect side
+        let sDir = (s[234].z < s[454].z) ? 'left' : 'right'; // Simple depth check
+        let earP = (sDir === 'left') ? s[234] : s[454];
+        let jawP = (sDir === 'left') ? s[177] : s[401]; // Better gonion landmarks
+        let chinP = s[152];
         
-        // D. Gonial Angle (Jaw Angle)
-        let ang = angle(ear, gon, chin);
-        let aScore = 0;
-        if (ang >= 115 && ang <= 128) aScore = 20; // Ideal
-        else if (ang < 110) aScore = -5; // Too square (cartoonish)
-        else if (ang > 135) aScore = -20; // Recessed/Melted
-        score += aScore;
-        log += stat("Gonial Angle", Math.floor(ang)+"°", aScore);
+        let ang = calculateAngle(earP, jawP, chinP);
+        let gScore = 0;
+        if (ang > 110 && ang < 130) gScore = 20;
+        else if (ang > 140) gScore = -15; // Recessed/Melted
+        else gScore = 0;
+        score += gScore;
+        metrics.push({name: "Gonial Angle", val: ang.toFixed(0)+"°", score: gScore, desc: "Angle of the jawline. 115°-125° is ideal."});
 
-        // E. Ramus Height
-        // Distance Ear-Gonion vs Nose-Chin
-        let ramusH = Math.sqrt(Math.pow(ear.x-gon.x, 2) + Math.pow(ear.y-gon.y, 2));
-        let faceH = Math.sqrt(Math.pow(s[1].x-s[152].x, 2) + Math.pow(s[1].y-s[152].y, 2));
-        let ramusRatio = ramusH / faceH;
-        let ramScore = 0;
-        if (ramusRatio > 0.4) ramScore = 15; // Tall Ramus
-        else if (ramusRatio < 0.25) ramScore = -10; // Short Ramus
-        score += ramScore;
-        log += stat("Ramus Height", ramusRatio > 0.35 ? "Tall/Strong" : "Average/Short", ramScore);
-
-        // F. Forward Growth (Chin Projection)
-        // Chin X should be relative to Brow X
-        // We need to rotate coordinates to be vertical, but simplified:
-        // In proper side profile, Chin X should be >= Brow X (relative to nose)
-        // Since we mirrored: 
-        // Left visible: Chin X < Brow X is bad (Recessed)
-        let browX = s[10].x;
-        let chinX = s[152].x;
-        let noseX = s[1].x;
-        let growthScore = 0;
+        // RENDER
+        score = Math.min(99, Math.max(10, score));
+        let tier = getTier(score);
         
-        // Normalize direction
-        let projected = false;
-        if (sideDir === 'left_visible') {
-            // Facing Right -> Chin should be greater X than Brow? 
-            // 0 is Left, 1 is Right.
-            // If facing right, NoseX is highest.
-            if (Math.abs(noseX - chinX) < Math.abs(noseX - browX)) projected = true;
-        } else {
-            if (Math.abs(noseX - chinX) < Math.abs(noseX - browX)) projected = true;
-        }
+        document.getElementById('finalScore').innerText = score.toFixed(1) + " / 100";
+        document.getElementById('finalTier').innerText = tier.name;
+        document.getElementById('finalTier').style.color = tier.color;
         
-        if (projected) growthScore = 15; else growthScore = -15;
-        score += growthScore;
-        log += stat("Forward Growth", projected ? "Projected" : "Recessed", growthScore);
-
-        // --- FINAL CALC ---
-        score = Math.max(1, Math.min(99, score));
-        
-        let tier = "";
-        let color = "";
-        
-        if (gender === 'male') {
-            if (score >= 94) { tier = "TRUE ADAM"; color = "#00FFFF"; }
-            else if (score >= 85) { tier = "CHAD"; color = "#00FF00"; }
-            else if (score >= 75) { tier = "HTN"; color = "#ADFF2F"; }
-            else if (score >= 60) { tier = "MTN"; color = "#FFFF00"; }
-            else if (score >= 45) { tier = "LTN"; color = "#FFA500"; }
-            else { tier = "SUB 5"; color = "#FF0000"; }
-        } else {
-            if (score >= 94) { tier = "TRUE EVE"; color = "#FF69B4"; }
-            else if (score >= 85) { tier = "STACY"; color = "#FF1493"; }
-            else if (score >= 75) { tier = "HTN"; color = "#ADFF2F"; }
-            else if (score >= 60) { tier = "MTN"; color = "#FFFF00"; }
-            else if (score >= 45) { tier = "LTN"; color = "#FFA500"; }
-            else { tier = "SUB 5"; color = "#FF0000"; }
-        }
-
-        // RENDER RESULTS
-        document.getElementById('finalTier').innerText = tier;
-        document.getElementById('finalTier').style.color = color;
-        document.getElementById('finalScore').innerText = `RAW SCORE: ${score.toFixed(1)}`;
-        document.getElementById('detailedStats').innerHTML = log;
-
-        // Render Canvases
-        let cF = document.getElementById('resFront'); cF.width=640; cF.height=480;
-        let cXF = cF.getContext('2d'); cXF.drawImage(frontImg, 0, 0);
-        drawFrontOverlay(cXF, f);
-
-        let cS = document.getElementById('resSide'); cS.width=640; cS.height=480;
-        let cXS = cS.getContext('2d'); cXS.drawImage(sideImg, 0, 0);
-        drawSideOverlay(cXS, s);
+        let grid = document.getElementById('metricsGrid');
+        grid.innerHTML = "";
+        metrics.forEach(m => {
+            let color = m.score > 0 ? "good" : (m.score < 0 ? "bad" : "mid");
+            grid.innerHTML += `
+                <div class="metric-card">
+                    <div class="metric-head">
+                        <span>${m.name}</span>
+                        <span class="${color}">${m.score > 0 ? "+" : ""}${m.score}</span>
+                    </div>
+                    <div class="metric-val">${m.val}</div>
+                    <div class="metric-desc">${m.desc}</div>
+                </div>
+            `;
+        });
     }
 
-    function stat(name, val, pts) {
-        let c = pts > 0 ? "stat-good" : (pts < 0 ? "stat-bad" : "stat-mid");
-        let sign = pts > 0 ? "+" : "";
-        return `<div class="stat-row"><span>${name}: <span style="color:white">${val}</span></span><span class="${c}">${sign}${pts}</span></div>`;
+    function calculateAngle(a, b, c) {
+        let AB = Math.sqrt(Math.pow(b.x-a.x,2) + Math.pow(b.y-a.y,2));
+        let BC = Math.sqrt(Math.pow(b.x-c.x,2) + Math.pow(b.y-c.y,2));
+        let AC = Math.sqrt(Math.pow(c.x-a.x,2) + Math.pow(c.y-a.y,2));
+        return Math.acos((BC*BC+AB*AB-AC*AC)/(2*BC*AB)) * (180/Math.PI);
     }
 
-    function angle(a, b, c) {
-        let ang = (Math.atan2(c.y-b.y, c.x-b.x) - Math.atan2(a.y-b.y, a.x-b.x)) * 180 / Math.PI;
-        return Math.abs(ang > 180 ? 360-ang : ang);
+    function getTier(s) {
+        if (s >= 90) return {name: "SUPREME", color: "#00ffff"};
+        if (s >= 80) return {name: "CHAD", color: "#00ff41"};
+        if (s >= 70) return {name: "HIGH TIER", color: "#ccff00"};
+        if (s >= 55) return {name: "MID TIER", color: "#ffaa00"};
+        return {name: "SUB 5", color: "#ff0033"};
     }
 
-    function drawFrontOverlay(ctx, lm) {
-        // We have to flip coordinate usage because canvas image is normal but lm is 1-x
-        // Actually, since we captured the mirrored video canvas, the image is ALREADY flipped visually.
-        // We just need to use (1-x) logic for coordinates to match.
-        function l(i1, i2, c) {
-            ctx.beginPath(); ctx.moveTo((1-lm[i1].x)*640, lm[i1].y*480);
-            ctx.lineTo((1-lm[i2].x)*640, lm[i2].y*480); ctx.strokeStyle=c; ctx.lineWidth=2; ctx.stroke();
-        }
-        l(33, 133, "yellow"); l(362, 263, "yellow"); // Eyes
-        l(234, 454, "green"); // Cheeks
-        l(58, 288, "magenta"); // Jaw
+    function drawMesh(lm, color) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1;
+        drawConnectors(ctx, lm, FACEMESH_TESSELATION, {color: color, lineWidth: 0.5});
     }
+    
+    // Initial wait for state
+    setTimeout(() => { state = 'READY'; }, 1000);
 
-    function drawSideOverlay(ctx, lm) {
-        let ear = (sideDir==='left_visible') ? 234 : 454;
-        let gon = (sideDir==='left_visible') ? 132 : 361;
-        let chin = 152;
-        
-        function l(i1, i2, c) {
-            ctx.beginPath(); ctx.moveTo((1-lm[i1].x)*640, lm[i1].y*480);
-            ctx.lineTo((1-lm[i2].x)*640, lm[i2].y*480); ctx.strokeStyle=c; ctx.lineWidth=4; ctx.stroke();
-        }
-        l(ear, gon, "red");
-        l(gon, chin, "red");
-        
-        // Growth line
-        ctx.beginPath(); ctx.moveTo((1-lm[10].x)*640, lm[10].y*480);
-        ctx.lineTo((1-lm[152].x)*640, lm[152].y*480);
-        ctx.strokeStyle="cyan"; ctx.lineWidth=1; ctx.setLineDash([5,5]); ctx.stroke();
-    }
 </script>
 </body>
 </html>
