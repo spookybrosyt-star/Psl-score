@@ -87,7 +87,6 @@
 
         .hidden { display: none !important; }
 
-        /* Voice Participant UI */
         .participant-card {
             width: 200px;
             height: 140px;
@@ -100,15 +99,20 @@
             position: relative;
             transition: transform 0.2s;
         }
-        .participant-card:hover {
-            transform: scale(1.02);
-        }
-        .speaking-border {
-            outline: 2px solid var(--green);
-        }
+        .participant-card:hover { transform: scale(1.02); }
+        .speaking-border { outline: 2px solid var(--green); }
     </style>
 </head>
 <body class="flex">
+
+    <!-- Deployment Warning (Only shows if config is missing) -->
+    <div id="config-error" class="fixed inset-0 z-[300] bg-black/90 flex items-center justify-center hidden p-6">
+        <div class="bg-[#2b2d31] p-8 rounded-lg max-w-md text-center">
+            <h2 class="text-red-500 text-xl font-bold mb-4">Configuration Missing</h2>
+            <p class="text-gray-300 text-sm mb-6">It looks like you deployed this to Netlify without setting up your Firebase config. To fix this, you need to replace the placeholder in the code with your actual Firebase project credentials.</p>
+            <button onclick="this.parentElement.parentElement.remove()" class="bg-gray-600 px-4 py-2 rounded text-white text-sm">Dismiss</button>
+        </div>
+    </div>
 
     <!-- Auth Overlay -->
     <div id="auth-screen" class="fixed inset-0 z-[200] bg-[#313338] flex items-center justify-center">
@@ -174,9 +178,7 @@
             </div>
             <div class="flex gap-1 text-gray-400">
                 <button id="open-settings-btn" class="p-1.5 hover:bg-[#3f4147] rounded transition-all text-[#b5bac1] hover:text-white">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84a.484.484 0 0 0-.48.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87a.49.49 0 0 0 .12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.27.41.48.41h3.84c.21 0 .43-.17.48-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.03-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
-                    </svg>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84a.484.484 0 0 0-.48.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87a.49.49 0 0 0 .12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.27.41.48.41h3.84c.21 0 .43-.17.48-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.03-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
                 </button>
             </div>
         </footer>
@@ -217,9 +219,7 @@
 
             <div id="voice-view" class="hidden flex-1 flex flex-col bg-[#1e1f22]">
                 <div class="flex-1 p-8 overflow-y-auto custom-scrollbar">
-                    <div id="participants-grid" class="flex flex-wrap gap-4 justify-center items-center h-full">
-                        <!-- Rounded Rectangle Profiles -->
-                    </div>
+                    <div id="participants-grid" class="flex flex-wrap gap-4 justify-center items-center h-full"></div>
                 </div>
                 <footer class="h-20 bg-[#232428] flex items-center justify-center gap-6">
                     <button class="w-12 h-12 rounded-full bg-[#313338] hover:bg-[#3f4147] flex items-center justify-center text-white transition-all">
@@ -258,7 +258,7 @@
             </div>
             <div id="pane-join" class="hidden">
                 <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Server ID</label>
-                <input type="text" id="server-id-input" placeholder="Paste ID here (e.g. S-XYZ123)" class="w-full bg-[#1e1f22] p-3 rounded border-none outline-none text-white mb-6 uppercase">
+                <input type="text" id="server-id-input" placeholder="Paste ID here" class="w-full bg-[#1e1f22] p-3 rounded border-none outline-none text-white mb-6 uppercase">
                 <button id="confirm-join-server" class="w-full bg-[#23a55a] hover:bg-[#1a7a42] py-2.5 rounded font-bold text-white">Join Server</button>
             </div>
             <button onclick="closeModals()" class="mt-4 text-sm text-gray-400 hover:underline w-full text-center">Cancel</button>
@@ -267,13 +267,13 @@
 
     <div id="channel-modal" class="modal-overlay hidden">
         <div class="bg-[#313338] p-6 rounded-lg w-full max-w-sm">
-            <h3 class="text-xl font-bold mb-4">Create Channel</h3>
+            <h3 class="text-xl font-bold mb-4 text-white">Create Channel</h3>
             <div class="mb-4">
                 <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Channel Type</label>
                 <div class="space-y-2">
                     <label class="flex items-center gap-3 p-3 bg-[#1e1f22] rounded cursor-pointer border border-transparent hover:border-gray-600 has-[:checked]:border-blue-500">
                         <input type="radio" name="channel-type" value="text" checked class="hidden peer">
-                        <span class="text-gray-400 peer-checked:text-white">#</span>
+                        <span class="text-gray-400 peer-checked:text-white font-bold">#</span>
                         <div class="flex-1">
                             <div class="text-sm font-bold text-white">Text</div>
                             <div class="text-xs text-gray-400">Send messages, images, and GIFs</div>
@@ -284,35 +284,43 @@
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" class="text-gray-400 peer-checked:text-white"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
                         <div class="flex-1">
                             <div class="text-sm font-bold text-white">Voice</div>
-                            <div class="text-xs text-gray-400">Hang out with voice, video, and screen share</div>
+                            <div class="text-xs text-gray-400">Hang out with voice and video</div>
                         </div>
                     </label>
                 </div>
             </div>
             <div class="mb-6">
-                <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Channel Name</label>
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-2 text-white">Channel Name</label>
                 <input type="text" id="channel-name-input" placeholder="new-channel" class="w-full bg-[#1e1f22] p-3 rounded border-none outline-none text-white">
             </div>
             <div class="flex justify-between items-center">
-                <button onclick="closeModals()" class="text-sm hover:underline">Cancel</button>
+                <button onclick="closeModals()" class="text-sm text-gray-400 hover:underline">Cancel</button>
                 <button id="confirm-create-channel" class="bg-[#5865f2] hover:bg-[#4752c4] px-6 py-2.5 rounded font-bold text-sm text-white">Create Channel</button>
             </div>
         </div>
     </div>
 
+    <!-- User Settings Modal -->
     <div id="settings-modal" class="modal-overlay hidden">
-        <div class="bg-[#313338] p-8 rounded-lg w-full max-w-md">
-            <h2 class="text-xl font-bold mb-6 text-white">User Settings</h2>
-            <div class="space-y-6">
-                <div class="flex items-center gap-4 p-4 bg-[#1e1f22] rounded">
-                    <div id="settings-pfp" class="w-16 h-16 rounded-full bg-indigo-600 flex items-center justify-center text-2xl font-bold text-white">?</div>
-                    <div>
-                        <div id="settings-name" class="font-bold text-lg text-white">Name</div>
-                        <div id="settings-id" class="text-sm text-gray-400 font-mono">ID: #000000</div>
-                    </div>
+        <div class="bg-[#313338] p-8 rounded-lg w-full max-w-2xl flex flex-col h-[80vh]">
+            <div class="flex justify-between items-start mb-8">
+                <div>
+                    <h2 class="text-white text-2xl font-bold">User Settings</h2>
+                    <p class="text-gray-400 text-sm">Manage your profile and account settings.</p>
                 </div>
-                <button id="signout-btn" class="w-full bg-[#da373c] hover:bg-[#a12829] text-white py-3 rounded font-bold">Logout</button>
-                <button onclick="closeModals()" class="w-full text-gray-400 hover:text-white transition-colors">Close</button>
+                <button onclick="closeModals()" class="text-gray-400 hover:text-white">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="bg-[#232428] rounded-lg p-4 flex items-center gap-4 mb-8">
+                <div id="settings-pfp" class="w-20 h-20 rounded-full bg-indigo-600 flex items-center justify-center text-3xl font-bold text-white">?</div>
+                <div class="flex-1">
+                    <h3 id="settings-name" class="text-xl font-bold text-white">User Name</h3>
+                    <p id="settings-id" class="text-gray-400 font-mono">#000000</p>
+                </div>
+            </div>
+            <div class="flex-1 border-t border-[#3f4147] pt-6">
+                <button id="signout-btn" class="border border-red-500 text-red-500 hover:bg-red-500 hover:text-white px-6 py-2 rounded font-bold transition-all">Log Out</button>
             </div>
         </div>
     </div>
@@ -322,8 +330,27 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, collection, query, onSnapshot, addDoc, updateDoc, serverTimestamp, orderBy, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const firebaseConfig = JSON.parse(__firebase_config);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'netcord-pro-v2';
+        // --- FALLBACK LOGIC FOR NETLIFY DEPLOYMENT ---
+        let firebaseConfig;
+        try {
+            firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        } catch (e) {
+            console.error("Firebase config parsing failed.");
+        }
+
+        if (!firebaseConfig) {
+            document.getElementById('config-error').classList.remove('hidden');
+            firebaseConfig = {
+                apiKey: "YOUR_API_KEY",
+                authDomain: "YOUR_PROJECT.firebaseapp.com",
+                projectId: "YOUR_PROJECT_ID",
+                storageBucket: "YOUR_PROJECT.appspot.com",
+                messagingSenderId: "YOUR_SENDER_ID",
+                appId: "YOUR_APP_ID"
+            };
+        }
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'netcord-v2-production';
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
@@ -354,10 +381,14 @@
         };
 
         const initAuth = async () => {
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                await signInWithCustomToken(auth, __initial_auth_token);
-            } else {
-                await signInAnonymously(auth);
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (err) {
+                console.error("Auth failed:", err);
             }
         };
 
@@ -376,6 +407,8 @@
                     } else {
                         authScreen.classList.remove('hidden');
                     }
+                }, (err) => {
+                    console.error("User snap error:", err);
                 });
             } else {
                 initAuth();
@@ -424,13 +457,12 @@
             document.querySelectorAll('.server-icon').forEach(el => el.classList.remove('active'));
             const serverEl = document.querySelector(`[data-id="${serverId}"]`);
             if (serverEl) serverEl.classList.add('active');
+            
             document.getElementById('home-logo').classList.remove('active');
             document.getElementById('home-actions').classList.add('hidden');
             document.getElementById('add-channel-btn').classList.remove('hidden');
             document.getElementById('copy-server-id').classList.remove('hidden');
-            document.getElementById('copy-server-id').onclick = () => {
-                navigator.clipboard.writeText(shortId);
-            };
+            document.getElementById('copy-server-id').onclick = () => navigator.clipboard.writeText(shortId);
 
             document.getElementById('sidebar-context-name').innerText = serverName;
             document.getElementById('sidebar-list-title').innerText = "Channels";
@@ -453,7 +485,6 @@
         window.openChat = (id, name, type, subType = 'text') => {
             activeChatType = type;
             activeChatId = type === 'dm' ? [currentUser.uid, id].sort().join('_') : id;
-            
             document.getElementById('active-name').innerText = name.toLowerCase().replace(/\s+/g, '-');
             
             if (subType === 'voice') {
@@ -472,35 +503,23 @@
         function joinVoiceChannel(name) {
             participantsGrid.innerHTML = `
                 <div class="participant-card speaking-border">
-                    <div class="w-16 h-16 rounded-full bg-indigo-600 flex items-center justify-center text-2xl font-bold text-white mb-3">
-                        ${userData.displayName.charAt(0)}
-                    </div>
+                    <div class="w-16 h-16 rounded-full bg-indigo-600 flex items-center justify-center text-2xl font-bold text-white mb-3">${userData.displayName.charAt(0)}</div>
                     <div class="text-white font-bold text-sm">${userData.displayName}</div>
-                </div>
-            `;
+                </div>`;
         }
 
         function startMessageListener() {
             if (unsubMessages) unsubMessages();
             if (!activeChatId) return;
-            
             const path = activeChatType === 'dm' ? 'direct_chats' : 'server_chats';
-            const q = query(
-                collection(db, 'artifacts', appId, 'public', 'data', path, activeChatId, 'messages'), 
-                orderBy('timestamp', 'asc')
-            );
-            
-            unsubMessages = onSnapshot(q, snap => {
-                renderMessages(snap.docs.map(d => d.data()));
-            }, (err) => console.error("Message error:", err));
+            const q = query(collection(db, 'artifacts', appId, 'public', 'data', path, activeChatId, 'messages'), orderBy('timestamp', 'asc'));
+            unsubMessages = onSnapshot(q, snap => renderMessages(snap.docs.map(d => d.data())), (err) => console.error(err));
         }
 
         function renderMessages(msgs) {
             chatMessages.innerHTML = msgs.map(msg => `
                 <div class="flex gap-4 hover:bg-[#2e3035] px-4 py-1 -mx-4 group">
-                    <div class="w-10 h-10 rounded-full bg-gray-600 flex-shrink-0 flex items-center justify-center font-bold text-white">
-                        ${msg.senderName.charAt(0)}
-                    </div>
+                    <div class="w-10 h-10 rounded-full bg-gray-600 flex-shrink-0 flex items-center justify-center font-bold text-white">${msg.senderName.charAt(0)}</div>
                     <div class="flex-1 min-w-0">
                         <div class="flex items-baseline gap-2">
                             <span class="font-bold text-white hover:underline cursor-pointer">${msg.senderName}</span>
@@ -508,8 +527,7 @@
                         </div>
                         <p class="text-sm text-[#dbdee1] break-words whitespace-pre-wrap">${msg.text}</p>
                     </div>
-                </div>
-            `).join('');
+                </div>`).join('');
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
@@ -518,73 +536,32 @@
             const input = document.getElementById('message-input');
             const text = input.value.trim();
             if (!text || !activeChatId) return;
-            
             const currentPath = activeChatType === 'dm' ? 'direct_chats' : 'server_chats';
-            const chatIdForSave = activeChatId; // Lock it in case user switches fast
-            
+            const chatIdForSave = activeChatId;
             input.value = '';
-            
             try {
                 await addDoc(collection(db, 'artifacts', appId, 'public', 'data', currentPath, chatIdForSave, 'messages'), {
-                    text, 
-                    senderId: currentUser.uid, 
-                    senderName: userData.displayName, 
-                    timestamp: serverTimestamp()
+                    text, senderId: currentUser.uid, senderName: userData.displayName, timestamp: serverTimestamp()
+                });
+            } catch (err) { console.error(err); }
+        };
+
+        document.getElementById('login-btn').onclick = async () => {
+            const name = document.getElementById('username-input').value.trim();
+            if (!name || !currentUser) return;
+            const shortId = Math.random().toString(36).substring(2, 8).toUpperCase();
+            try {
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.uid), {
+                    uid: currentUser.uid, displayName: name, shortId, friends: [], joinedAt: serverTimestamp()
                 });
             } catch (err) {
-                console.error("Failed to send:", err);
+                console.error("Signup failed. Check Firestore rules.", err);
             }
         };
 
-        document.getElementById('send-friend-request-btn').onclick = async () => {
-            const targetId = document.getElementById('add-friend-id-input').value.trim().toUpperCase();
-            const status = document.getElementById('add-friend-status');
-            if (targetId.length !== 6 || targetId === userData.shortId) return;
-            
-            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), async (snap) => {
-                const targetUserDoc = snap.docs.find(d => d.data().shortId === targetId);
-                if (targetUserDoc) {
-                    const targetUid = targetUserDoc.id;
-                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.uid), { friends: arrayUnion(targetUid) });
-                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', targetUid), { friends: arrayUnion(currentUser.uid) });
-                    status.innerText = `Added ${targetUserDoc.data().displayName}!`;
-                    status.className = "mt-4 text-sm font-medium text-green-500";
-                    document.getElementById('add-friend-id-input').value = "";
-                }
-            }, { once: true });
-        };
-
-        document.getElementById('confirm-join-server').onclick = async () => {
-            const shortId = document.getElementById('server-id-input').value.trim().toUpperCase();
-            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'servers'), async (snap) => {
-                const serverDoc = snap.docs.find(d => d.data().shortId === shortId);
-                if (serverDoc) {
-                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'servers', serverDoc.id), { members: arrayUnion(currentUser.uid) });
-                    closeModals();
-                    window.openServer(serverDoc.id, serverDoc.data().name, serverDoc.data().shortId);
-                }
-            }, { once: true });
-        };
-
-        document.getElementById('confirm-create-server').onclick = async () => {
-            const name = document.getElementById('server-name-input').value.trim();
-            if (!name) return;
-            const shortId = "S-" + Math.random().toString(36).substring(2, 8).toUpperCase();
-            const sRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'servers'), {
-                name, creatorId: currentUser.uid, members: [currentUser.uid], shortId, createdAt: serverTimestamp()
-            });
-            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'servers', sRef.id, 'channels'), {
-                name: 'general', type: 'text', createdAt: serverTimestamp()
-            });
-            closeModals();
-            window.openServer(sRef.id, name, shortId);
-        };
-
         document.getElementById('home-logo').onclick = () => {
-            currentServerId = null;
-            activeChatId = null;
+            currentServerId = null; activeChatId = null;
             if (unsubMessages) unsubMessages();
-            
             document.querySelectorAll('.server-icon').forEach(el => el.classList.remove('active'));
             document.getElementById('home-logo').classList.add('active');
             document.getElementById('home-actions').classList.remove('hidden');
@@ -594,7 +571,6 @@
             document.getElementById('sidebar-list-title').innerText = "Direct Messages";
             document.getElementById('friends-header-actions').classList.remove('hidden');
             document.getElementById('active-name').innerText = "Friends";
-            
             friendsDashboard.classList.remove('hidden');
             chatView.classList.add('hidden');
             voiceView.classList.add('hidden');
@@ -613,22 +589,44 @@
             friendsDashboard.classList.remove('hidden');
         };
 
-        document.getElementById('login-btn').onclick = async () => {
-            const name = document.getElementById('username-input').value.trim();
+        document.getElementById('confirm-create-server').onclick = async () => {
+            const name = document.getElementById('server-name-input').value.trim();
             if (!name) return;
-            const shortId = Math.random().toString(36).substring(2, 8).toUpperCase();
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.uid), {
-                uid: currentUser.uid, displayName: name, shortId, friends: [], joinedAt: serverTimestamp()
+            const shortId = "S-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+            const sRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'servers'), {
+                name, creatorId: currentUser.uid, members: [currentUser.uid], shortId, createdAt: serverTimestamp()
             });
+            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'servers', sRef.id, 'channels'), {
+                name: 'general', type: 'text', createdAt: serverTimestamp()
+            });
+            closeModals();
+            window.openServer(sRef.id, name, shortId);
         };
 
-        document.getElementById('disconnect-call-btn').onclick = () => {
-            voiceView.classList.add('hidden');
-            if (activeChatId) {
-                chatView.classList.remove('hidden');
-            } else {
-                friendsDashboard.classList.remove('hidden');
-            }
+        document.getElementById('confirm-join-server').onclick = async () => {
+            const shortId = document.getElementById('server-id-input').value.trim().toUpperCase();
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'servers'), async (snap) => {
+                const serverDoc = snap.docs.find(d => d.data().shortId === shortId);
+                if (serverDoc) {
+                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'servers', serverDoc.id), { members: arrayUnion(currentUser.uid) });
+                    closeModals();
+                    window.openServer(serverDoc.id, serverDoc.data().name, serverDoc.data().shortId);
+                }
+            }, { once: true });
+        };
+
+        document.getElementById('send-friend-request-btn').onclick = async () => {
+            const targetId = document.getElementById('add-friend-id-input').value.trim().toUpperCase();
+            if (targetId.length !== 6 || targetId === userData.shortId) return;
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), async (snap) => {
+                const targetUserDoc = snap.docs.find(d => d.data().shortId === targetId);
+                if (targetUserDoc) {
+                    const targetUid = targetUserDoc.id;
+                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.uid), { friends: arrayUnion(targetUid) });
+                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', targetUid), { friends: arrayUnion(currentUser.uid) });
+                    document.getElementById('add-friend-status').innerText = `Added ${targetUserDoc.data().displayName}!`;
+                }
+            }, { once: true });
         };
 
         document.getElementById('open-settings-btn').onclick = () => {
@@ -637,20 +635,17 @@
             document.getElementById('settings-pfp').innerText = userData.displayName.charAt(0);
             document.getElementById('settings-modal').classList.remove('hidden');
         };
-
         document.getElementById('signout-btn').onclick = () => location.reload();
-
-        document.getElementById('tab-create').onclick = (e) => {
-            document.getElementById('pane-create').classList.remove('hidden');
-            document.getElementById('pane-join').classList.add('hidden');
-            e.target.classList.add('border-b-2', 'border-blue-500', 'text-white');
-            document.getElementById('tab-join').classList.remove('border-b-2', 'border-blue-500', 'text-white');
-        };
-        document.getElementById('tab-join').onclick = (e) => {
-            document.getElementById('pane-join').classList.remove('hidden');
-            document.getElementById('pane-create').classList.add('hidden');
-            e.target.classList.add('border-b-2', 'border-blue-500', 'text-white');
-            document.getElementById('tab-create').classList.remove('border-b-2', 'border-blue-500', 'text-white');
+        document.getElementById('open-server-modal').onclick = () => document.getElementById('server-modal').classList.remove('hidden');
+        document.getElementById('add-channel-btn').onclick = () => document.getElementById('channel-modal').classList.remove('hidden');
+        document.getElementById('confirm-create-channel').onclick = async () => {
+            const name = document.getElementById('channel-name-input').value.trim();
+            const type = document.querySelector('input[name="channel-type"]:checked').value;
+            if (!name || !currentServerId) return;
+            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'servers', currentServerId, 'channels'), {
+                name, type, createdAt: serverTimestamp()
+            });
+            closeModals();
         };
 
         function renderFriendsDashboard(friends) {
@@ -664,19 +659,6 @@
                 </div>`;
             document.getElementById('online-friends-list').innerHTML = friends.map(userRow).join('');
         }
-
-        document.getElementById('open-server-modal').onclick = () => document.getElementById('server-modal').classList.remove('hidden');
-        document.getElementById('add-channel-btn').onclick = () => document.getElementById('channel-modal').classList.remove('hidden');
-
-        document.getElementById('confirm-create-channel').onclick = async () => {
-            const name = document.getElementById('channel-name-input').value.trim();
-            const type = document.querySelector('input[name="channel-type"]:checked').value;
-            if (!name || !currentServerId) return;
-            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'servers', currentServerId, 'channels'), {
-                name, type, createdAt: serverTimestamp()
-            });
-            closeModals();
-        };
     </script>
 </body>
 </html>
