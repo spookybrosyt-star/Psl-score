@@ -2,287 +2,681 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Strict PSL Analyzer - True Adam Edition</title>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Netcord | Communication Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        :root { 
-            --true-adam: #00ffff; --chad: #00ff41; --htn: #adff2f; 
-            --mtn: #ffff00; --ltn: #ffa500; --sub5: #ff0033; --bg: #0a0a0a; 
+        @import url('https://fonts.googleapis.com/css2?family=GG+Sans:wght@400;500;600;700&display=swap');
+
+        :root {
+            --bg-darkest: #1e1f22; 
+            --bg-darker: #2b2d31;  
+            --bg-standard: #313338;
+            --bg-modifier-hover: #3f4147;
+            --text-normal: #dbdee1;
+            --text-muted: #949ba4;
+            --blurple: #5865f2;
+            --blurple-hover: #4752c4;
+            --green: #23a55a;
         }
-        body { background: var(--bg); color: #eee; font-family: 'Consolas', monospace; margin: 0; overflow: hidden; display: flex; flex-direction: column; align-items: center; }
-        
-        .hud-container { position: relative; width: 100%; max-width: 900px; margin-top: 20px; }
-        .viewport { position: relative; width: 100%; border: 1px solid #333; background: #000; overflow: hidden; border-radius: 4px; }
-        video { width: 100%; display: block; transform: scaleX(-1); opacity: 0.7; }
-        canvas.live-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform: scaleX(-1); }
-        
-        /* ALIGNMENT BOX */
-        .guide-box {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 300px; height: 400px; border: 2px dashed rgba(255, 255, 255, 0.2);
-            border-radius: 120px; pointer-events: none; transition: 0.3s;
+
+        body { 
+            background: var(--bg-darkest); 
+            color: var(--text-normal);
+            font-family: 'gg sans', 'Noto Sans', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            margin: 0;
         }
-        .locked { border-color: var(--chad); border-style: solid; box-shadow: 0 0 15px rgba(0, 255, 65, 0.2); }
-        .pose-msg { position: absolute; top: 20px; width: 100%; text-align: center; font-size: 24px; font-weight: bold; text-shadow: 0 2px 5px #000; letter-spacing: 2px; }
 
-        /* HUD CONTROLS */
-        .status-bar { background: #111; border: 1px solid #333; padding: 20px; width: 100%; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; margin-top: 10px; }
-        .progress-rail { width: 40%; background: #222; height: 10px; border-radius: 5px; overflow: hidden; }
-        .progress-fill { width: 0%; height: 100%; background: var(--true-adam); transition: width 0.1s linear; }
-        .btn { background: transparent; border: 1px solid var(--true-adam); color: var(--true-adam); padding: 12px 30px; cursor: pointer; font-weight: bold; text-transform: uppercase; }
-        .btn:disabled { border-color: #444; color: #444; cursor: not-allowed; }
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: var(--bg-darkest); border-radius: 10px; }
 
-        /* RESULTS SCREEN */
-        .results-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #050505; z-index: 100; display: none; overflow-y: auto; padding: 40px 20px; box-sizing: border-box; }
-        .tier-header { text-align: center; margin-bottom: 40px; }
-        .tier-title { font-size: 85px; font-family: 'Impact', sans-serif; letter-spacing: 5px; margin: 0; }
-        .rating-num { font-size: 28px; color: #888; margin-top: 10px; }
+        .server-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--bg-standard);
+            border-radius: 50%;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            color: var(--text-normal);
+            font-weight: 600;
+        }
+        .server-icon:hover, .server-icon.active {
+            border-radius: 16px;
+            background: var(--blurple);
+            color: white;
+        }
 
-        .report-flex { display: flex; justify-content: center; gap: 30px; flex-wrap: wrap; margin-bottom: 40px; }
-        .report-card { background: #111; border: 1px solid #333; padding: 15px; border-radius: 8px; }
-        .report-canvas { width: 100%; max-width: 420px; background: #000; border: 1px solid #222; border-radius: 4px; }
-        .report-label { margin-bottom: 10px; color: #666; font-size: 14px; text-transform: uppercase; font-weight: bold; }
+        .channel-item {
+            padding: 6px 8px;
+            margin: 2px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--text-muted);
+            font-weight: 500;
+            font-size: 14px;
+        }
+        .channel-item:hover {
+            background: var(--bg-modifier-hover);
+            color: var(--text-normal);
+        }
+        .channel-item.active {
+            background: #3f4147;
+            color: white;
+        }
 
-        .metrics-list { max-width: 900px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; }
-        .metric-item { background: #151515; padding: 15px; border-left: 4px solid #333; }
-        .val-good { border-color: var(--chad); } .val-bad { border-color: var(--sub5); }
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(2px);
+        }
+
+        .hidden { display: none !important; }
+
+        /* Voice Participant UI */
+        .participant-card {
+            width: 200px;
+            height: 140px;
+            background: #2b2d31;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: transform 0.2s;
+        }
+        .participant-card:hover {
+            transform: scale(1.02);
+        }
+        .speaking-border {
+            outline: 2px solid var(--green);
+        }
     </style>
 </head>
-<body>
+<body class="flex">
 
-<div class="hud-container">
-    <div class="viewport">
-        <video id="inputVideo" playsinline autoplay></video>
-        <canvas id="liveCanvas" class="live-overlay"></canvas>
-        <div id="guide" class="guide-box"></div>
-        <div id="poseMsg" class="pose-msg" style="color: #ff0033;">ALIGN FACE</div>
-    </div>
-    
-    <div class="status-bar">
-        <div style="font-weight: bold;">SYSTEM: <span id="statusTxt">WAITING</span></div>
-        <div class="progress-rail"><div id="progressBar" class="progress-fill"></div></div>
-        <button id="actionBtn" class="btn" disabled onclick="startScanPhase()">BEGIN ANALYSIS</button>
-    </div>
-</div>
-
-<div id="resultsScreen" class="results-overlay">
-    <div class="tier-header">
-        <h1 id="resTier" class="tier-title">TRUE ADAM</h1>
-        <div id="resPsl" class="rating-num">PSL RATING: 0.0</div>
-    </div>
-
-    <div class="report-flex">
-        <div class="report-card">
-            <div class="report-label">Frontal Symmetry & Tilt</div>
-            <canvas id="canvasFront" class="report-canvas"></canvas>
-        </div>
-        <div class="report-card">
-            <div class="report-label">Profile Gonial & Projection</div>
-            <canvas id="canvasSide" class="report-canvas"></canvas>
+    <!-- Auth Overlay -->
+    <div id="auth-screen" class="fixed inset-0 z-[200] bg-[#313338] flex items-center justify-center">
+        <div class="bg-[#2b2d31] p-8 rounded-lg shadow-2xl w-full max-w-md text-center">
+            <h1 class="text-2xl font-bold mb-2 text-white">Welcome to Netcord</h1>
+            <p class="text-[#b5bac1] mb-6">Enter a display name to join the community.</p>
+            <div class="text-left space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-[#b5bac1] uppercase mb-2">Display Name</label>
+                    <input type="text" id="username-input" class="w-full bg-[#1e1f22] p-3 rounded border-none outline-none text-white focus:ring-1 focus:ring-blue-500">
+                </div>
+                <button id="login-btn" class="w-full bg-[#5865f2] hover:bg-[#4752c4] text-white font-bold py-3 rounded transition-all">Start Chatting</button>
+            </div>
         </div>
     </div>
 
-    <div id="metricsGrid" class="metrics-list"></div>
-    
-    <div style="text-align: center; margin-top: 50px;">
-        <button class="btn" onclick="location.reload()">NEW SESSION</button>
-    </div>
-</div>
+    <!-- 1. Server Sidebar -->
+    <nav class="w-[72px] bg-[#1e1f22] flex flex-col items-center py-3 gap-2 flex-shrink-0">
+        <div id="home-logo" class="server-icon bg-[#313338] mb-2 group active" title="Direct Messages">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" class="text-white">
+                <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="currentColor"/>
+                <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+        </div>
+        <div class="w-8 h-[2px] bg-[#35363c] rounded-full mb-2"></div>
+        <div id="server-list-sidebar" class="flex flex-col gap-2"></div>
+        <button id="open-server-modal" class="server-icon text-green-500 hover:bg-green-600 hover:text-white mt-auto">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+    </nav>
 
-<script>
-    // Config
-    const SCAN_DURATION = 5000; // 5 seconds
-    
-    // State
-    let state = 'IDLE'; 
-    let scanStart = 0;
-    let buffer = [];
-    let frontData = null;
-    let sideData = null;
-
-    const video = document.getElementById('inputVideo');
-    const canvas = document.getElementById('liveCanvas');
-    const ctx = canvas.getContext('2d');
-    const btn = document.getElementById('actionBtn');
-    const poseMsg = document.getElementById('poseMsg');
-    const bar = document.getElementById('progressBar');
-
-    const faceMesh = new FaceMesh({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`});
-    faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.7, minTrackingConfidence: 0.7 });
-    faceMesh.onResults(handleFace);
-
-    const camera = new Camera(video, { onFrame: async () => { await faceMesh.send({image: video}); }, width: 1280, height: 720 });
-    camera.start();
-
-    function handleFace(results) {
-        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-        ctx.save();
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    <!-- 2. Sidebar -->
+    <aside class="w-60 bg-[#2b2d31] flex flex-col flex-shrink-0">
+        <header id="sidebar-header" class="h-12 px-4 flex items-center justify-between shadow-sm border-b border-[#1e1f22] font-bold text-sm">
+            <span id="sidebar-context-name">Netcord Home</span>
+            <button id="copy-server-id" class="text-[10px] text-gray-500 hover:text-white hidden">Copy ID</button>
+        </header>
         
-        if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
-            const lm = results.multiFaceLandmarks[0];
-            const isAligned = checkAlignment(lm);
+        <div class="flex-1 overflow-y-auto pt-4 custom-scrollbar">
+            <div id="home-actions" class="px-2 space-y-1 mb-4">
+                <button id="friends-tab-btn" class="w-full flex items-center gap-3 px-3 py-2 rounded text-white bg-[#3f4147] font-medium text-sm">
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                    Friends
+                </button>
+            </div>
+            
+            <div class="px-4 mb-2 flex items-center justify-between">
+                <div id="sidebar-list-title" class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Direct Messages</div>
+                <button id="add-channel-btn" class="text-gray-400 hover:text-white hidden" title="Add Channel">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
+            </div>
+            <div id="contact-list" class="space-y-[2px]"></div>
+        </div>
 
-            // Draw Face Mesh (Always active, no scanning line)
-            drawConnectors(ctx, lm, FACEMESH_TESSELATION, {color: isAligned.ok ? '#00ff4120' : '#ffffff10', lineWidth: 1});
-            drawConnectors(ctx, lm, FACEMESH_FACE_OVAL, {color: isAligned.ok ? '#00ff41' : '#444', lineWidth: 2});
+        <!-- User Profile Area -->
+        <footer class="h-14 bg-[#232428] px-2 flex items-center gap-2">
+            <div id="my-profile-icon" class="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-xs font-bold text-white">?</div>
+            <div class="flex-1 min-w-0">
+                <p id="my-name-display" class="text-xs font-bold truncate">Loading...</p>
+                <p class="text-[10px] text-gray-400">ID: <span id="my-id-display" class="font-mono uppercase">...</span></p>
+            </div>
+            <div class="flex gap-1 text-gray-400">
+                <button id="open-settings-btn" class="p-1.5 hover:bg-[#3f4147] rounded transition-all text-[#b5bac1] hover:text-white">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84a.484.484 0 0 0-.48.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87a.49.49 0 0 0 .12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.27.41.48.41h3.84c.21 0 .43-.17.48-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.03-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+                    </svg>
+                </button>
+            </div>
+        </footer>
+    </aside>
 
-            if (state === 'IDLE' || state === 'INTERMISSION') {
-                if (isAligned.ok) {
-                    poseMsg.innerText = "HOLD POSE"; poseMsg.style.color = "#00ff41";
-                    document.getElementById('guide').className = "guide-box locked";
-                    btn.disabled = false;
-                } else {
-                    poseMsg.innerText = isAligned.msg; poseMsg.style.color = "#ff0033";
-                    document.getElementById('guide').className = "guide-box";
-                    btn.disabled = true;
-                }
-            } else if (state.includes('SCAN')) {
-                if (isAligned.ok) {
-                    buffer.push(lm);
-                    let progress = (Date.now() - scanStart) / SCAN_DURATION;
-                    bar.style.width = (progress * 100) + "%";
-                    poseMsg.innerText = "SCANNING... DON'T MOVE";
-                    if (progress >= 1) finishPhase();
-                } else {
-                    poseMsg.innerText = "RE-ALIGN FACE";
-                    scanStart += 50; // Penalty
-                }
+    <!-- 3. Main Area -->
+    <main class="flex-1 flex flex-col bg-[#313338] relative">
+        <header class="h-12 px-4 flex items-center justify-between shadow-sm border-b border-[#1e1f22]">
+            <div class="flex items-center gap-3">
+                <div id="header-icon-container" class="text-gray-400"></div>
+                <span id="active-name" class="font-bold">Friends</span>
+            </div>
+            <div id="friends-header-actions" class="flex gap-4">
+                 <button id="show-add-friend-btn" class="bg-[#248046] hover:bg-[#1a6334] text-white px-2 py-1 rounded text-xs font-bold">Add Friend</button>
+            </div>
+        </header>
+
+        <div class="flex-1 relative flex flex-col overflow-hidden">
+            <div id="friends-dashboard" class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                <div class="mb-6">
+                    <h2 id="online-count" class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Online — 0</h2>
+                    <div id="online-friends-list" class="space-y-1"></div>
+                </div>
+                <div>
+                    <h2 id="offline-count" class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Offline — 0</h2>
+                    <div id="offline-friends-list" class="space-y-1"></div>
+                </div>
+            </div>
+
+            <div id="chat-view" class="hidden flex-1 flex flex-col overflow-hidden">
+                <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar"></div>
+                <footer id="chat-footer" class="px-4 pb-6">
+                    <form id="chat-form" class="bg-[#383a40] rounded-lg px-4 py-2.5 flex items-center gap-4">
+                        <input type="text" id="message-input" autocomplete="off" placeholder="Message" class="flex-1 bg-transparent border-none outline-none text-sm placeholder:text-gray-500 text-white">
+                    </form>
+                </footer>
+            </div>
+
+            <div id="voice-view" class="hidden flex-1 flex flex-col bg-[#1e1f22]">
+                <div class="flex-1 p-8 overflow-y-auto custom-scrollbar">
+                    <div id="participants-grid" class="flex flex-wrap gap-4 justify-center items-center h-full">
+                        <!-- Rounded Rectangle Profiles -->
+                    </div>
+                </div>
+                <footer class="h-20 bg-[#232428] flex items-center justify-center gap-6">
+                    <button class="w-12 h-12 rounded-full bg-[#313338] hover:bg-[#3f4147] flex items-center justify-center text-white transition-all">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+                    </button>
+                    <button id="disconnect-call-btn" class="w-12 h-12 rounded-full bg-[#da373c] hover:bg-[#a12829] flex items-center justify-center text-white transition-all">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.58.9-.98.45-1.89.1-2.78-.51L1.21 10.4c-.13-.13-.21-.3-.21-.49 0-.19.07-.36.21-.49 3.08-3.04 7.28-4.92 11.9-4.92s8.81 1.88 11.9 4.92c.14.13.21.3.21.49 0 .19-.08.36-.21.49l-2.83 2.83c-.9.9-1.8.96-2.78.51-.35-.16-.58-.51-.58-.9V9.72c-1.45-.47-3-.72-4.6-.72z"/></svg>
+                    </button>
+                </footer>
+            </div>
+
+            <div id="add-friend-overlay" class="hidden absolute inset-0 bg-[#313338] p-8 z-10">
+                <h2 class="text-white text-base font-bold uppercase mb-2">Add Friend</h2>
+                <p class="text-sm text-gray-400 mb-4">You can add friends with their Netcord ID (6 characters).</p>
+                <div class="flex gap-2">
+                    <input type="text" id="add-friend-id-input" maxlength="6" placeholder="Enter a 6-character ID" class="flex-1 bg-[#1e1f22] p-3 rounded border-none outline-none text-white focus:ring-1 focus:ring-blue-500 uppercase font-mono">
+                    <button id="send-friend-request-btn" class="bg-[#5865f2] hover:bg-[#4752c4] text-white px-6 py-2 rounded font-bold transition-all">Add Friend</button>
+                </div>
+                <div id="add-friend-status" class="mt-4 text-sm font-medium"></div>
+                <button id="close-add-friend" class="mt-6 text-xs text-gray-400 hover:underline">Go back to friends list</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modals -->
+    <div id="server-modal" class="modal-overlay hidden">
+        <div class="bg-[#313338] p-6 rounded-lg w-full max-w-sm">
+            <div class="flex border-b border-[#3f4147] mb-6">
+                <button id="tab-create" class="flex-1 py-2 font-bold border-b-2 border-blue-500 text-white">Create</button>
+                <button id="tab-join" class="flex-1 py-2 font-bold text-gray-500">Join</button>
+            </div>
+            <div id="pane-create">
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Server Name</label>
+                <input type="text" id="server-name-input" class="w-full bg-[#1e1f22] p-3 rounded border-none outline-none text-white mb-6" placeholder="My Awesome Server">
+                <button id="confirm-create-server" class="w-full bg-[#5865f2] hover:bg-[#4752c4] py-2.5 rounded font-bold text-white">Create Server</button>
+            </div>
+            <div id="pane-join" class="hidden">
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Server ID</label>
+                <input type="text" id="server-id-input" placeholder="Paste ID here (e.g. S-XYZ123)" class="w-full bg-[#1e1f22] p-3 rounded border-none outline-none text-white mb-6 uppercase">
+                <button id="confirm-join-server" class="w-full bg-[#23a55a] hover:bg-[#1a7a42] py-2.5 rounded font-bold text-white">Join Server</button>
+            </div>
+            <button onclick="closeModals()" class="mt-4 text-sm text-gray-400 hover:underline w-full text-center">Cancel</button>
+        </div>
+    </div>
+
+    <div id="channel-modal" class="modal-overlay hidden">
+        <div class="bg-[#313338] p-6 rounded-lg w-full max-w-sm">
+            <h3 class="text-xl font-bold mb-4">Create Channel</h3>
+            <div class="mb-4">
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Channel Type</label>
+                <div class="space-y-2">
+                    <label class="flex items-center gap-3 p-3 bg-[#1e1f22] rounded cursor-pointer border border-transparent hover:border-gray-600 has-[:checked]:border-blue-500">
+                        <input type="radio" name="channel-type" value="text" checked class="hidden peer">
+                        <span class="text-gray-400 peer-checked:text-white">#</span>
+                        <div class="flex-1">
+                            <div class="text-sm font-bold text-white">Text</div>
+                            <div class="text-xs text-gray-400">Send messages, images, and GIFs</div>
+                        </div>
+                    </label>
+                    <label class="flex items-center gap-3 p-3 bg-[#1e1f22] rounded cursor-pointer border border-transparent hover:border-gray-600 has-[:checked]:border-blue-500">
+                        <input type="radio" name="channel-type" value="voice" class="hidden peer">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" class="text-gray-400 peer-checked:text-white"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+                        <div class="flex-1">
+                            <div class="text-sm font-bold text-white">Voice</div>
+                            <div class="text-xs text-gray-400">Hang out with voice, video, and screen share</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+            <div class="mb-6">
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Channel Name</label>
+                <input type="text" id="channel-name-input" placeholder="new-channel" class="w-full bg-[#1e1f22] p-3 rounded border-none outline-none text-white">
+            </div>
+            <div class="flex justify-between items-center">
+                <button onclick="closeModals()" class="text-sm hover:underline">Cancel</button>
+                <button id="confirm-create-channel" class="bg-[#5865f2] hover:bg-[#4752c4] px-6 py-2.5 rounded font-bold text-sm text-white">Create Channel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="settings-modal" class="modal-overlay hidden">
+        <div class="bg-[#313338] p-8 rounded-lg w-full max-w-md">
+            <h2 class="text-xl font-bold mb-6 text-white">User Settings</h2>
+            <div class="space-y-6">
+                <div class="flex items-center gap-4 p-4 bg-[#1e1f22] rounded">
+                    <div id="settings-pfp" class="w-16 h-16 rounded-full bg-indigo-600 flex items-center justify-center text-2xl font-bold text-white">?</div>
+                    <div>
+                        <div id="settings-name" class="font-bold text-lg text-white">Name</div>
+                        <div id="settings-id" class="text-sm text-gray-400 font-mono">ID: #000000</div>
+                    </div>
+                </div>
+                <button id="signout-btn" class="w-full bg-[#da373c] hover:bg-[#a12829] text-white py-3 rounded font-bold">Logout</button>
+                <button onclick="closeModals()" class="w-full text-gray-400 hover:text-white transition-colors">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, query, onSnapshot, addDoc, updateDoc, serverTimestamp, orderBy, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'netcord-pro-v2';
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let currentUser = null;
+        let userData = null;
+        let currentServerId = null;
+        let activeChatId = null;
+        let activeChatType = 'dm'; 
+        
+        let unsubMessages = null;
+        let unsubChannels = null;
+        let unsubServers = null;
+        let unsubUser = null;
+
+        const authScreen = document.getElementById('auth-screen');
+        const chatMessages = document.getElementById('chat-messages');
+        const contactList = document.getElementById('contact-list');
+        const serverListSidebar = document.getElementById('server-list-sidebar');
+        const friendsDashboard = document.getElementById('friends-dashboard');
+        const chatView = document.getElementById('chat-view');
+        const voiceView = document.getElementById('voice-view');
+        const addFriendOverlay = document.getElementById('add-friend-overlay');
+        const participantsGrid = document.getElementById('participants-grid');
+
+        window.closeModals = () => {
+            document.querySelectorAll('.modal-overlay').forEach(m => m.classList.add('hidden'));
+        };
+
+        const initAuth = async () => {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
             }
-        }
-        ctx.restore();
-    }
+        };
 
-    function checkAlignment(lm) {
-        let yaw = Math.abs(lm[234].z - lm[454].z);
-        if (state === 'SIDE_SCAN' || state === 'INTERMISSION') {
-            return yaw > 0.1 ? {ok:true} : {ok:false, msg: "TURN TO PROFILE"};
-        }
-        return yaw < 0.04 ? {ok:true} : {ok:false, msg: "LOOK STRAIGHT"};
-    }
-
-    function startScanPhase() {
-        buffer = [];
-        scanStart = Date.now();
-        state = (state === 'IDLE') ? 'FRONT_SCAN' : 'SIDE_SCAN';
-        btn.disabled = true;
-    }
-
-    function finishPhase() {
-        let snap = document.createElement('canvas');
-        snap.width = video.videoWidth; snap.height = video.videoHeight;
-        snap.getContext('2d').drawImage(video, 0, 0);
-        
-        let avg = averageLandmarks(buffer);
-
-        if (state === 'FRONT_SCAN') {
-            frontData = { img: snap, lm: avg };
-            state = 'INTERMISSION';
-            bar.style.width = '0%';
-            btn.innerText = "START PROFILE SCAN";
-        } else {
-            sideData = { img: snap, lm: avg };
-            generateReport();
-        }
-    }
-
-    function averageLandmarks(samples) {
-        let avg = JSON.parse(JSON.stringify(samples[0]));
-        for(let i=0; i<478; i++) {
-            let x=0, y=0, z=0;
-            for(let s of samples) { x+=s[i].x; y+=s[i].y; z+=s[i].z; }
-            avg[i].x = x/samples.length; avg[i].y = y/samples.length; avg[i].z = z/samples.length;
-        }
-        return avg;
-    }
-
-    function generateReport() {
-        document.querySelector('.hud-container').style.display = 'none';
-        document.getElementById('resultsScreen').style.display = 'block';
-
-        // PSL Scoring Logic
-        let psl = 4.0 + (Math.random() * 2.5); // Baseline MTN logic
-        
-        // Boost for specific metrics
-        const f = frontData.lm;
-        const tilt = (f[362].y - f[263].y); // Simplified eye tilt check
-        if (tilt < 0) psl += 0.8; // Positive tilt bonus
-
-        const s = sideData.lm;
-        const gonial = 120; // Simulated angle calc
-
-        let tier = "MTN";
-        let color = "var(--mtn)";
-
-        if (psl >= 8.0) { tier = "TRUE ADAM"; color = "var(--true-adam)"; }
-        else if (psl >= 7.0) { tier = "CHAD"; color = "var(--chad)"; }
-        else if (psl >= 6.0) { tier = "HTN"; color = "var(--htn)"; }
-        else if (psl >= 4.5) { tier = "MTN"; color = "var(--mtn)"; }
-        else if (psl >= 3.5) { tier = "LTN"; color = "var(--ltn)"; }
-        else { tier = "SUB 5"; color = "var(--sub5)"; }
-
-        document.getElementById('resTier').innerText = tier;
-        document.getElementById('resTier').style.color = color;
-        document.getElementById('resPsl').innerText = "PSL RATING: " + psl.toFixed(1);
-
-        // Draw Marked Images
-        drawMarked('canvasFront', frontData, 'front');
-        drawMarked('canvasSide', sideData, 'side');
-        
-        renderStats([
-            {name: "Canthal Tilt", val: tilt < 0 ? "Positive" : "Negative", good: tilt < 0},
-            {name: "Gonial Angle", val: gonial + "°", good: true},
-            {name: "Midface Ratio", val: "1.04", good: true}
-        ]);
-    }
-
-    function drawMarked(id, data, type) {
-        const c = document.getElementById(id);
-        const ctx = c.getContext('2d');
-        const lm = data.lm;
-        c.width = 1280; c.height = 720;
-        
-        // Mirror image back to normal for report
-        ctx.scale(-1, 1); ctx.translate(-1280, 0);
-        ctx.drawImage(data.img, 0, 0);
-        
-        ctx.lineWidth = 4;
-        ctx.setLineDash([]);
-
-        if (type === 'front') {
-            // Canthal Tilt Line
-            ctx.strokeStyle = '#ffff00';
-            line(ctx, lm[33], lm[133]); line(ctx, lm[362], lm[263]);
-            // Jaw Outline
-            ctx.strokeStyle = '#00ff41';
-            line(ctx, lm[172], lm[152]); line(ctx, lm[152], lm[397]);
-        } else {
-            // Profile Jaw Angle (Gonial)
-            ctx.strokeStyle = '#00ffff';
-            line(ctx, lm[152], lm[177]); line(ctx, lm[177], lm[132]);
-        }
-    }
-
-    function line(ctx, p1, p2) {
-        ctx.beginPath();
-        ctx.moveTo(p1.x * 1280, p1.y * 720);
-        ctx.lineTo(p2.x * 1280, p2.y * 720);
-        ctx.stroke();
-    }
-
-    function renderStats(metrics) {
-        let html = "";
-        metrics.forEach(m => {
-            html += `<div class="metric-item ${m.good ? 'val-good' : 'val-bad'}">
-                <div style="color:#888; font-size:12px;">${m.name}</div>
-                <div style="font-size:20px; font-weight:bold;">${m.val}</div>
-            </div>`;
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUser = user;
+                if (unsubUser) unsubUser();
+                unsubUser = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), (snap) => {
+                    if (snap.exists()) {
+                        userData = snap.data();
+                        document.getElementById('my-name-display').innerText = userData.displayName;
+                        document.getElementById('my-id-display').innerText = userData.shortId;
+                        document.getElementById('my-profile-icon').innerText = userData.displayName.charAt(0);
+                        authScreen.classList.add('hidden');
+                        startGlobalListeners();
+                    } else {
+                        authScreen.classList.remove('hidden');
+                    }
+                });
+            } else {
+                initAuth();
+            }
         });
-        document.getElementById('metricsGrid').innerHTML = html;
-    }
-</script>
+
+        function startGlobalListeners() {
+            if (!currentUser) return;
+            if (unsubServers) unsubServers();
+            unsubServers = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'servers'), snap => {
+                const servers = snap.docs
+                    .map(d => ({...d.data(), id: d.id}))
+                    .filter(s => s.members?.includes(currentUser.uid));
+                
+                serverListSidebar.innerHTML = servers.map(s => `
+                    <div onclick="window.openServer('${s.id}', '${s.name}', '${s.shortId || s.id}')" data-id="${s.id}" class="server-icon" title="${s.name}">${s.name.charAt(0)}</div>
+                `).join('');
+            });
+            loadFriendsList();
+        }
+
+        function loadFriendsList() {
+            if (!currentUser || !userData) return;
+            const friendIds = userData.friends || [];
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), snap => {
+                const friends = snap.docs.map(d => d.data()).filter(u => friendIds.includes(u.uid));
+                if (currentServerId === null) {
+                    contactList.innerHTML = friends.map(u => `
+                        <div onclick="window.openChat('${u.uid}', '${u.displayName}', 'dm')" class="channel-item">
+                            <div class="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-xs text-white font-bold">${u.displayName.charAt(0)}</div>
+                            <span class="truncate">${u.displayName}</span>
+                        </div>
+                    `).join('');
+                }
+                renderFriendsDashboard(friends);
+            });
+        }
+
+        window.openServer = (serverId, serverName, shortId) => {
+            currentServerId = serverId;
+            friendsDashboard.classList.add('hidden');
+            chatView.classList.remove('hidden');
+            voiceView.classList.add('hidden');
+            addFriendOverlay.classList.add('hidden');
+            
+            document.querySelectorAll('.server-icon').forEach(el => el.classList.remove('active'));
+            const serverEl = document.querySelector(`[data-id="${serverId}"]`);
+            if (serverEl) serverEl.classList.add('active');
+            document.getElementById('home-logo').classList.remove('active');
+            document.getElementById('home-actions').classList.add('hidden');
+            document.getElementById('add-channel-btn').classList.remove('hidden');
+            document.getElementById('copy-server-id').classList.remove('hidden');
+            document.getElementById('copy-server-id').onclick = () => {
+                navigator.clipboard.writeText(shortId);
+            };
+
+            document.getElementById('sidebar-context-name').innerText = serverName;
+            document.getElementById('sidebar-list-title').innerText = "Channels";
+            document.getElementById('friends-header-actions').classList.add('hidden');
+            loadChannels(serverId);
+        };
+
+        function loadChannels(serverId) {
+            if (unsubChannels) unsubChannels();
+            const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'servers', serverId, 'channels'), orderBy('createdAt', 'asc'));
+            unsubChannels = onSnapshot(q, snap => {
+                contactList.innerHTML = snap.docs.map(d => {
+                    const c = d.data();
+                    const icon = c.type === 'voice' ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" class="text-gray-500"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>` : `<span class="text-gray-500 font-bold text-lg">#</span>`;
+                    return `<div onclick="window.openChat('${d.id}', '${c.name}', 'server', '${c.type}')" class="channel-item">${icon}<span class="truncate">${c.name}</span></div>`;
+                }).join('');
+            });
+        }
+
+        window.openChat = (id, name, type, subType = 'text') => {
+            activeChatType = type;
+            activeChatId = type === 'dm' ? [currentUser.uid, id].sort().join('_') : id;
+            
+            document.getElementById('active-name').innerText = name.toLowerCase().replace(/\s+/g, '-');
+            
+            if (subType === 'voice') {
+                chatView.classList.add('hidden');
+                voiceView.classList.remove('hidden');
+                joinVoiceChannel(name);
+                return;
+            }
+
+            chatView.classList.remove('hidden');
+            voiceView.classList.add('hidden');
+            friendsDashboard.classList.add('hidden');
+            startMessageListener();
+        };
+
+        function joinVoiceChannel(name) {
+            participantsGrid.innerHTML = `
+                <div class="participant-card speaking-border">
+                    <div class="w-16 h-16 rounded-full bg-indigo-600 flex items-center justify-center text-2xl font-bold text-white mb-3">
+                        ${userData.displayName.charAt(0)}
+                    </div>
+                    <div class="text-white font-bold text-sm">${userData.displayName}</div>
+                </div>
+            `;
+        }
+
+        function startMessageListener() {
+            if (unsubMessages) unsubMessages();
+            if (!activeChatId) return;
+            
+            const path = activeChatType === 'dm' ? 'direct_chats' : 'server_chats';
+            const q = query(
+                collection(db, 'artifacts', appId, 'public', 'data', path, activeChatId, 'messages'), 
+                orderBy('timestamp', 'asc')
+            );
+            
+            unsubMessages = onSnapshot(q, snap => {
+                renderMessages(snap.docs.map(d => d.data()));
+            }, (err) => console.error("Message error:", err));
+        }
+
+        function renderMessages(msgs) {
+            chatMessages.innerHTML = msgs.map(msg => `
+                <div class="flex gap-4 hover:bg-[#2e3035] px-4 py-1 -mx-4 group">
+                    <div class="w-10 h-10 rounded-full bg-gray-600 flex-shrink-0 flex items-center justify-center font-bold text-white">
+                        ${msg.senderName.charAt(0)}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-baseline gap-2">
+                            <span class="font-bold text-white hover:underline cursor-pointer">${msg.senderName}</span>
+                            <span class="text-[10px] text-gray-400">${msg.timestamp ? new Date(msg.timestamp.seconds*1000).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '...'}</span>
+                        </div>
+                        <p class="text-sm text-[#dbdee1] break-words whitespace-pre-wrap">${msg.text}</p>
+                    </div>
+                </div>
+            `).join('');
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        document.getElementById('chat-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const input = document.getElementById('message-input');
+            const text = input.value.trim();
+            if (!text || !activeChatId) return;
+            
+            const currentPath = activeChatType === 'dm' ? 'direct_chats' : 'server_chats';
+            const chatIdForSave = activeChatId; // Lock it in case user switches fast
+            
+            input.value = '';
+            
+            try {
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', currentPath, chatIdForSave, 'messages'), {
+                    text, 
+                    senderId: currentUser.uid, 
+                    senderName: userData.displayName, 
+                    timestamp: serverTimestamp()
+                });
+            } catch (err) {
+                console.error("Failed to send:", err);
+            }
+        };
+
+        document.getElementById('send-friend-request-btn').onclick = async () => {
+            const targetId = document.getElementById('add-friend-id-input').value.trim().toUpperCase();
+            const status = document.getElementById('add-friend-status');
+            if (targetId.length !== 6 || targetId === userData.shortId) return;
+            
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), async (snap) => {
+                const targetUserDoc = snap.docs.find(d => d.data().shortId === targetId);
+                if (targetUserDoc) {
+                    const targetUid = targetUserDoc.id;
+                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.uid), { friends: arrayUnion(targetUid) });
+                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', targetUid), { friends: arrayUnion(currentUser.uid) });
+                    status.innerText = `Added ${targetUserDoc.data().displayName}!`;
+                    status.className = "mt-4 text-sm font-medium text-green-500";
+                    document.getElementById('add-friend-id-input').value = "";
+                }
+            }, { once: true });
+        };
+
+        document.getElementById('confirm-join-server').onclick = async () => {
+            const shortId = document.getElementById('server-id-input').value.trim().toUpperCase();
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'servers'), async (snap) => {
+                const serverDoc = snap.docs.find(d => d.data().shortId === shortId);
+                if (serverDoc) {
+                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'servers', serverDoc.id), { members: arrayUnion(currentUser.uid) });
+                    closeModals();
+                    window.openServer(serverDoc.id, serverDoc.data().name, serverDoc.data().shortId);
+                }
+            }, { once: true });
+        };
+
+        document.getElementById('confirm-create-server').onclick = async () => {
+            const name = document.getElementById('server-name-input').value.trim();
+            if (!name) return;
+            const shortId = "S-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+            const sRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'servers'), {
+                name, creatorId: currentUser.uid, members: [currentUser.uid], shortId, createdAt: serverTimestamp()
+            });
+            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'servers', sRef.id, 'channels'), {
+                name: 'general', type: 'text', createdAt: serverTimestamp()
+            });
+            closeModals();
+            window.openServer(sRef.id, name, shortId);
+        };
+
+        document.getElementById('home-logo').onclick = () => {
+            currentServerId = null;
+            activeChatId = null;
+            if (unsubMessages) unsubMessages();
+            
+            document.querySelectorAll('.server-icon').forEach(el => el.classList.remove('active'));
+            document.getElementById('home-logo').classList.add('active');
+            document.getElementById('home-actions').classList.remove('hidden');
+            document.getElementById('add-channel-btn').classList.add('hidden');
+            document.getElementById('copy-server-id').classList.add('hidden');
+            document.getElementById('sidebar-context-name').innerText = "Netcord Home";
+            document.getElementById('sidebar-list-title').innerText = "Direct Messages";
+            document.getElementById('friends-header-actions').classList.remove('hidden');
+            document.getElementById('active-name').innerText = "Friends";
+            
+            friendsDashboard.classList.remove('hidden');
+            chatView.classList.add('hidden');
+            voiceView.classList.add('hidden');
+            addFriendOverlay.classList.add('hidden');
+            loadFriendsList();
+        };
+
+        document.getElementById('show-add-friend-btn').onclick = () => {
+            addFriendOverlay.classList.remove('hidden');
+            friendsDashboard.classList.add('hidden');
+            chatView.classList.add('hidden');
+        };
+
+        document.getElementById('close-add-friend').onclick = () => {
+            addFriendOverlay.classList.add('hidden');
+            friendsDashboard.classList.remove('hidden');
+        };
+
+        document.getElementById('login-btn').onclick = async () => {
+            const name = document.getElementById('username-input').value.trim();
+            if (!name) return;
+            const shortId = Math.random().toString(36).substring(2, 8).toUpperCase();
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.uid), {
+                uid: currentUser.uid, displayName: name, shortId, friends: [], joinedAt: serverTimestamp()
+            });
+        };
+
+        document.getElementById('disconnect-call-btn').onclick = () => {
+            voiceView.classList.add('hidden');
+            if (activeChatId) {
+                chatView.classList.remove('hidden');
+            } else {
+                friendsDashboard.classList.remove('hidden');
+            }
+        };
+
+        document.getElementById('open-settings-btn').onclick = () => {
+            document.getElementById('settings-name').innerText = userData.displayName;
+            document.getElementById('settings-id').innerText = `ID: #${userData.shortId}`;
+            document.getElementById('settings-pfp').innerText = userData.displayName.charAt(0);
+            document.getElementById('settings-modal').classList.remove('hidden');
+        };
+
+        document.getElementById('signout-btn').onclick = () => location.reload();
+
+        document.getElementById('tab-create').onclick = (e) => {
+            document.getElementById('pane-create').classList.remove('hidden');
+            document.getElementById('pane-join').classList.add('hidden');
+            e.target.classList.add('border-b-2', 'border-blue-500', 'text-white');
+            document.getElementById('tab-join').classList.remove('border-b-2', 'border-blue-500', 'text-white');
+        };
+        document.getElementById('tab-join').onclick = (e) => {
+            document.getElementById('pane-join').classList.remove('hidden');
+            document.getElementById('pane-create').classList.add('hidden');
+            e.target.classList.add('border-b-2', 'border-blue-500', 'text-white');
+            document.getElementById('tab-create').classList.remove('border-b-2', 'border-blue-500', 'text-white');
+        };
+
+        function renderFriendsDashboard(friends) {
+            document.getElementById('online-count').innerText = `Friends — ${friends.length}`;
+            const userRow = u => `
+                <div onclick="window.openChat('${u.uid}', '${u.displayName}', 'dm')" class="flex items-center justify-between p-3 rounded hover:bg-[#3f4147] cursor-pointer group">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold">${u.displayName.charAt(0)}</div>
+                        <div class="text-white font-bold text-sm">${u.displayName}</div>
+                    </div>
+                </div>`;
+            document.getElementById('online-friends-list').innerHTML = friends.map(userRow).join('');
+        }
+
+        document.getElementById('open-server-modal').onclick = () => document.getElementById('server-modal').classList.remove('hidden');
+        document.getElementById('add-channel-btn').onclick = () => document.getElementById('channel-modal').classList.remove('hidden');
+
+        document.getElementById('confirm-create-channel').onclick = async () => {
+            const name = document.getElementById('channel-name-input').value.trim();
+            const type = document.querySelector('input[name="channel-type"]:checked').value;
+            if (!name || !currentServerId) return;
+            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'servers', currentServerId, 'channels'), {
+                name, type, createdAt: serverTimestamp()
+            });
+            closeModals();
+        };
+    </script>
 </body>
 </html>
